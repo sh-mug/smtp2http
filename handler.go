@@ -28,14 +28,17 @@ func handler(req *smtpsrv.Request) error {
 			spam = spfres != spf.Pass
 		}
 		if spam {
+			log.Println(`[handler] spam detected`)
 			return errors.New("Your host isn't configured correctly or you are a spammer -_-")
 		} else if !req.Mailable {
+			log.Println(`[handler] not mailable`)
 			return errors.New("Your mail isn't valid because it cannot receive emails -_-")
 		}
 	}
 
 	msg, err := parsemail.Parse(req.Message.Body)
 	if err != nil {
+		log.Println(`[handler] fail to read`)
 		return errors.New("Cannot read your message, it may be because of it exceeded the limits")
 	}
 
@@ -62,10 +65,13 @@ func handler(req *smtpsrv.Request) error {
 	// submit the form
 	resp, err := rq.Post(*flagWebhook)
 	if err != nil {
+		log.Println(`[handler] internal error`)
 		return errors.New("Cannot accept your message due to internal error, please report that to our engineers, '" + (err.Error()) + "'")
 	} else if resp.StatusCode() != 200 {
+		log.Println(`[handler] backend returned error`)
 		return errors.New("BACKEND: " + resp.Status())
 	}
 
+	log.Println(`[handler] successfully processed`)
 	return nil
 }
