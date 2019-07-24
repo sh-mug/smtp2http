@@ -2,27 +2,39 @@ package main
 
 import (
 	"errors"
+	"log"
+	"net"
 	"strconv"
 	"strings"
 
 	"github.com/DusanKasan/parsemail"
 
 	"github.com/alash3al/go-smtpsrv"
-	"github.com/go-resty/resty"
 	"github.com/zaccone/spf"
+	"gopkg.in/resty.v1"
 )
 
 func handler(req *smtpsrv.Request) error {
+	log.Printf(`[handler] from:"%s" to:"%s" remote_addr:"%s"`+"\n", req.From, req.To, req.RemoteAddr)
+
 	// validate the from data
 	if *flagStrictValidation {
-		if req.SPFResult != spf.Pass {
+		spam := req.SPFResult != spf.Pass
+		if spam {
+			// trust mails from gmail.com
+			from := req.From
+			ip, _, _ := net.SplitHostPort(req.RemoteAddr)
+			spfres, _, _ := spf.CheckHost(net.ParseIP(ip), `gmail.com`, from)
+			spam = spfres != spf.Pass
+		}
+		if spam {
 			return errors.New("Your host isn't configured correctly or you are a spammer -_-")
 		} else if !req.Mailable {
 			return errors.New("Your mail isn't valid because it cannot receive emails -_-")
 		}
 	}
 
-	msg, err := parsemail.Parse(req.Message)
+	msg, err := parsemail.Parse(req.Message.Body)
 	if err != nil {
 		return errors.New("Cannot read your message, it may be because of it exceeded the limits")
 	}
