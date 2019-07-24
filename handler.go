@@ -36,7 +36,7 @@ func handler(req *smtpsrv.Request) error {
 		}
 	}
 
-	msg, err := parsemail.Parse(req.Message.Body)
+	msg, err := parsemail.Parse(req.Message)
 	if err != nil {
 		log.Println(`[handler] fail to read`)
 		return errors.New("Cannot read your message, it may be because of it exceeded the limits")
