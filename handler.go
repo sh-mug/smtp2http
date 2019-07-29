@@ -46,14 +46,15 @@ func handler(req *smtpsrv.Request) error {
 
 	// set the url-encoded-data
 	rq.SetFormData(map[string]string{
-		"id":              msg.Header.Get("Message-ID"),
-		"subject":         msg.Subject,
-		"body[text]":      string(msg.TextBody),
-		"body[html]":      string(msg.HTMLBody),
-		"addresses[from]": req.From,
-		"addresses[to]":   strings.Join(extractEmails(msg.To), ","),
-		"addresses[cc]":   strings.Join(extractEmails(msg.Cc), ","),
-		"addresses[bcc]":  strings.Join(extractEmails(msg.Bcc), ","),
+		"id":                  msg.Header.Get("Message-ID"),
+		"subject":             msg.Subject,
+		"body[text]":          string(msg.TextBody),
+		"body[html]":          string(msg.HTMLBody),
+		"addresses[mailfrom]": req.From,
+		"addresses[from]":     strings.Join(extractEmails(msg.From), ","),
+		"addresses[to]":       strings.Join(extractEmails(msg.To), ","),
+		"addresses[cc]":       strings.Join(extractEmails(msg.Cc), ","),
+		"addresses[bcc]":      strings.Join(extractEmails(msg.Bcc), ","),
 	})
 
 	// set the files "attachments"
