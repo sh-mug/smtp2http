@@ -55,13 +55,8 @@ func handler(req *smtpsrv.Request) error {
 		"addresses[to]":       strings.Join(extractEmails(msg.To), ","),
 		"addresses[cc]":       strings.Join(extractEmails(msg.Cc), ","),
 		"addresses[bcc]":      strings.Join(extractEmails(msg.Bcc), ","),
+		"file_count":          strconv.Itoa(len(msg.Attachments)),
 	})
-
-	// set the files "attachments"
-	for i, file := range msg.Attachments {
-		is := strconv.Itoa(i)
-		rq.SetFileReader("file["+is+"]", file.Filename, (file.Data))
-	}
 
 	// submit the form
 	resp, err := rq.Post(*flagWebhook)
