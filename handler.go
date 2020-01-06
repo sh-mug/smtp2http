@@ -29,17 +29,18 @@ func handler(req *smtpsrv.Request) error {
 		}
 		if spam {
 			log.Println(`[handler] spam detected`)
+			// should say "you are spammer" to spammer.
 			return errors.New("Your host isn't configured correctly or you are a spammer -_-")
 		} else if !req.Mailable {
 			log.Println(`[handler] not mailable`)
-			return errors.New("Your mail isn't valid because it cannot receive emails -_-")
+			return nil
 		}
 	}
 
 	msg, err := parsemail.Parse(req.Message)
 	if err != nil {
-		log.Println(`[handler] fail to read`)
-		return errors.New("Cannot read your message, it may be because of it exceeded the limits")
+		log.Println(`[handler] fail to read, maybe because of huge size`)
+		return nil
 	}
 
 	rq := resty.R()
@@ -61,11 +62,11 @@ func handler(req *smtpsrv.Request) error {
 	// submit the form
 	resp, err := rq.Post(*flagWebhook)
 	if err != nil {
-		log.Println(`[handler] internal error`)
-		return errors.New("Cannot accept your message due to internal error, please report that to our engineers, '" + (err.Error()) + "'")
+		log.Println(`[handler] internal error: '` + err.Error() + `'`)
+		return nil
 	} else if resp.StatusCode() != 200 {
-		log.Println(`[handler] backend returned error`)
-		return errors.New("BACKEND: " + resp.Status())
+		log.Println(`[handler] backend returned error: status=` + resp.Status())
+		return nil
 	}
 
 	log.Println(`[handler] successfully processed`)
