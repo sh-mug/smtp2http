@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"log"
 	"net"
@@ -8,10 +9,9 @@ import (
 	"strings"
 
 	"github.com/DusanKasan/parsemail"
-
 	"github.com/alash3al/go-smtpsrv"
+	"github.com/go-resty/resty/v2"
 	"github.com/zaccone/spf"
-	"gopkg.in/resty.v1"
 )
 
 func handler(req *smtpsrv.Request) error {
@@ -43,28 +43,38 @@ func handler(req *smtpsrv.Request) error {
 		return nil
 	}
 
-	rq := resty.R()
+	params := map[string]interface{}{
+		"id":      msg.Header.Get("Message-ID"),
+		"subject": msg.Subject,
+		"body": map[string]interface{}{
+			"text": string(msg.TextBody),
+			"html": string(msg.HTMLBody),
+		},
+		"addresses": map[string]interface{}{
+			"mailfrom": req.From,
+			"from":     strings.Join(extractEmails(msg.From), ","),
+			"to":       strings.Join(extractEmails(msg.To), ","),
+			"cc":       strings.Join(extractEmails(msg.Cc), ","),
+			"bcc":      strings.Join(extractEmails(msg.Bcc), ","),
+		},
+		"file_count": strconv.Itoa(len(msg.Attachments)),
+	}
 
-	// set the url-encoded-data
-	rq.SetFormData(map[string]string{
-		"id":                  msg.Header.Get("Message-ID"),
-		"subject":             msg.Subject,
-		"body[text]":          string(msg.TextBody),
-		"body[html]":          string(msg.HTMLBody),
-		"addresses[mailfrom]": req.From,
-		"addresses[from]":     strings.Join(extractEmails(msg.From), ","),
-		"addresses[to]":       strings.Join(extractEmails(msg.To), ","),
-		"addresses[cc]":       strings.Join(extractEmails(msg.Cc), ","),
-		"addresses[bcc]":      strings.Join(extractEmails(msg.Bcc), ","),
-		"file_count":          strconv.Itoa(len(msg.Attachments)),
-	})
+	body, err := json.Marshal(params)
+	if err != nil {
+		log.Println(`[handler] internal error while encoding params: '` + err.Error() + `'`)
+		return nil
+	}
 
-	// submit the form
-	resp, err := rq.Post(*flagWebhook)
+	resp, err := resty.New().R().
+		SetHeader("Content-Type", "application/json").
+		SetBody(body).
+		Post(*flagWebhook)
 	if err != nil {
 		log.Println(`[handler] internal error: '` + err.Error() + `'`)
 		return nil
-	} else if resp.StatusCode() != 200 {
+	}
+	if resp.StatusCode() != 200 {
 		log.Println(`[handler] backend returned error: status=` + resp.Status())
 		return nil
 	}
