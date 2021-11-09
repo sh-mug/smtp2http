@@ -37,6 +37,12 @@ func handler(req *smtpsrv.Request) error {
 		}
 	}
 
+	// reject emails not forwarded from Gmail
+	if !strings.Contains(req.From, `+caf_=pr-log=mail-hook.tsg.ne.jp@`) {
+		log.Println(`[handler] mailfrom is ` + req.From + `, so it's probably not forwarding from Gmail`)
+		return nil
+	}
+
 	msg, err := parsemail.Parse(req.Message)
 	if err != nil {
 		log.Println(`[handler] fail to read, maybe because of huge size`)
